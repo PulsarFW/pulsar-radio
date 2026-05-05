@@ -12,9 +12,6 @@ jobs:
   create-release:
     runs-on: ubuntu-latest
     steps:
-      - name: Install zip
-        run: sudo apt install zip
-
       - name: Get latest code
         uses: actions/checkout@v4
 
@@ -33,11 +30,9 @@ jobs:
 
       - name: Bundle files
         run: |
-          mkdir -p ./temp/pulsar-radio
-          cp ./{README.md,fxmanifest.lua,config.lua} ./temp/pulsar-radio
-          cp -r ./{client,ui} ./temp/pulsar-radio
-          rm -rf ./temp/pulsar-radio/ui/node_modules
-          cd ./temp && zip -r ../pulsar-radio.zip ./pulsar-radio
+          mkdir -p staging/pulsar-radio
+          rsync -a --exclude='.github' --exclude='node_modules' --exclude='staging' . staging/pulsar-radio/
+          cd staging && zip -r ../pulsar-radio.zip pulsar-radio/
 
       - name: Create release
         uses: softprops/action-gh-release@v2
