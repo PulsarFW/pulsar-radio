@@ -1,3 +1,5 @@
+local config = load(LoadResourceFile(GetCurrentResourceName(), "config/shared.lua"))()
+
 local radioOpen = false
 _radioProp = 0
 
@@ -25,52 +27,50 @@ local radioNames = {
 
 local radioChannelCycle = false
 
-AddEventHandler('onClientResourceStart', function(resource)
-	if resource == GetCurrentResourceName() then
-		Wait(1000)
-		exports["pulsar-kbs"]:Add("voip_radio_power", "", "keyboard", "Voice - Radio - Toggle Power On/Off",
-			function()
-			if LocalPlayer.state.loggedIn and HAS_RADIO and not radioChannelCycle and not LocalPlayer.state.isCuffed and not LocalPlayer.state.isHardCuffed and not LocalPlayer.state.isDead then
-					radioChannelCycle = true
-					ToggleRadioPower(false)
-					SetTimeout(1000, function()
-						radioChannelCycle = false
-					end)
-				end
-			end)
+CreateThread(function()
+	plsr.State.flags.onRadio = false
 
-		exports["pulsar-kbs"]:Add("voip_radio_open", "", "keyboard", "Voice - Radio - Open Radio", function()
-			if LocalPlayer.state.loggedIn and HAS_RADIO and not LocalPlayer.state.doingAction and not LocalPlayer.state.isCuffed and not LocalPlayer.state.isHardCuffed and not LocalPlayer.state.isDead then
+	plsr.Keybinds:Add("voip_radio_power", "", "keyboard", "Voice - Radio - Toggle Power On/Off", function()
+			if plsr.State.flags.loggedIn and HAS_RADIO and not radioChannelCycle then
+				radioChannelCycle = true
+				ToggleRadioPower(false)
+				Citizen.SetTimeout(1000, function()
+					radioChannelCycle = false
+				end)
+			end
+		end)
+
+		plsr.Keybinds:Add("voip_radio_open", "", "keyboard", "Voice - Radio - Open Radio", function()
+			if plsr.State.flags.loggedIn and HAS_RADIO and not plsr.State.flags.doingAction then
 				if CanUseRadio(HAS_RADIO) then
 					OpenRadio()
 				end
 			end
 		end)
 
-		exports["pulsar-kbs"]:Add("voip_radio_vol_down", "", "keyboard", "Voice - Radio - Volume Down", function()
-			if LocalPlayer.state.loggedIn and HAS_RADIO and RADIO_POWER then
+		plsr.Keybinds:Add("voip_radio_vol_down", "", "keyboard", "Voice - Radio - Volume Down", function()
+			if plsr.State.flags.loggedIn and HAS_RADIO and RADIO_POWER then
 				RadioVolumeDown(true)
 			end
 		end)
 
-		exports["pulsar-kbs"]:Add("voip_radio_vol_up", "", "keyboard", "Voice - Radio - Volume Up", function()
-			if LocalPlayer.state.loggedIn and HAS_RADIO and RADIO_POWER then
+		plsr.Keybinds:Add("voip_radio_vol_up", "", "keyboard", "Voice - Radio - Volume Up", function()
+			if plsr.State.flags.loggedIn and HAS_RADIO and RADIO_POWER then
 				RadioVolumeUp(true)
 			end
 		end)
 
-		exports["pulsar-kbs"]:Add("voip_radio_next", "", "keyboard", "Voice - Radio - Channel Next", function()
-			if LocalPlayer.state.loggedIn and HAS_RADIO and RADIO_POWER then
+		plsr.Keybinds:Add("voip_radio_next", "", "keyboard", "Voice - Radio - Channel Next", function()
+			if plsr.State.flags.loggedIn and HAS_RADIO and RADIO_POWER then
 				CycleRadioChannel(true)
 			end
 		end)
 
-		exports["pulsar-kbs"]:Add("voip_radio_prev", "", "keyboard", "Voice - Radio - Channel Prev.", function()
-			if LocalPlayer.state.loggedIn and HAS_RADIO and RADIO_POWER then
-				CycleRadioChannel(false)
-			end
-		end)
-	end
+	plsr.Keybinds:Add("voip_radio_prev", "", "keyboard", "Voice - Radio - Channel Prev.", function()
+		if plsr.State.flags.loggedIn and HAS_RADIO and RADIO_POWER then
+			CycleRadioChannel(false)
+		end
+	end)
 end)
 
 RegisterNetEvent("Characters:Client:Spawn")
@@ -80,12 +80,12 @@ AddEventHandler("Characters:Client:Spawn", function()
 	RADIO_FREQUENCY = 0
 	RADIO_FREQUENCY_NAME = ""
 
-	RADIO_VOLUME = exports["pulsar-voip"]:GetRadioVolume()
-	RADIO_CLICKS_VOLUME = exports["pulsar-voip"]:GetRadioClickVolume()
+	RADIO_VOLUME = plsr.VOIP.Settings.Volumes.Radio:Get()
+	RADIO_CLICKS_VOLUME = plsr.VOIP.Settings.Volumes.RadioClicks:Get()
 	HAS_RADIO = false
-	LocalPlayer.state.radioType = false
+	plsr.State.flags.radioType = false
 
-	exports['pulsar-hud']:RegisterStatus("radio-freq", 0, 1000, "walkie-talkie", "#4056b3", false, false, {
+	plsr.Hud:RegisterStatus("radio-freq", 0, 1000, "walkie-talkie", "#4056b3", false, false, {
 		hideZero = true,
 		force = "numbers",
 	})
@@ -93,7 +93,7 @@ AddEventHandler("Characters:Client:Spawn", function()
 	Wait(1000)
 
 	HAS_RADIO = CheckCharacterHasRadio()
-	LocalPlayer.state.radioType = HAS_RADIO
+	plsr.State.flags.radioType = HAS_RADIO
 	SendUpdates()
 end)
 
@@ -115,7 +115,7 @@ RegisterNetEvent("Radio:Client:OpenUI", function(rType)
 	if CanUseRadio(rType) then
 		if HAS_RADIO ~= rType then
 			HAS_RADIO = rType
-			LocalPlayer.state.radioType = HAS_RADIO
+			plsr.State.flags.radioType = HAS_RADIO
 			SendUpdates()
 		end
 
@@ -134,7 +134,7 @@ function OpenRadio()
 		type = "APP_SHOW",
 	})
 
-	TriggerEvent('ox_inventory:disarm', LocalPlayer.state.ped, true)
+	plsr.Weapons:UnequipIfEquippedNoAnim()
 
 	CreateThread(function()
 		local playerPed = PlayerPedId()
@@ -204,7 +204,7 @@ function SendUpdates()
 			frequency = RADIO_FREQUENCY,
 			frequencyName = RADIO_FREQUENCY_NAME,
 			power = RADIO_POWER,
-			volume = exports['pulsar-core']:UtilsRound(RADIO_VOLUME, 0),
+			volume = plsr.Utils:Round(RADIO_VOLUME, 0),
 			type = HAS_RADIO,
 			typeName = radioNames[HAS_RADIO] or "Radio",
 		},
@@ -230,20 +230,20 @@ function ToggleRadioPower(fromUI)
 		TriggerEvent("EmergencyAlerts:Client:RadioChannelChange", "0")
 		TriggerEvent("Status:Client:Update", "radio-freq", 0)
 		if not fromUI then
-			exports["pulsar-hud"]:Notification("error", "Radio Turned Off", 2500)
+			plsr.Notification:Error("Radio Turned Off", 2500)
 		end
-		exports["pulsar-sounds"]:PlayOne("radiooff.ogg", 0.05 * (RADIO_CLICKS_VOLUME / 100))
-		LocalPlayer.state:set("onRadio", false, true)
+		plsr.Sounds.Do.Play:One("radiooff.ogg", 0.05 * (RADIO_CLICKS_VOLUME / 100))
+		plsr.State.flags.onRadio = false
 	else
 		if not fromUI then
-			exports["pulsar-hud"]:Notification("success", "Radio Turned On", 2500)
+			plsr.Notification:Success("Radio Turned On", 2500)
 		end
 		RADIO_POWER = true
 		if RADIO_FREQUENCY_LAST and RADIO_FREQUENCY_LAST > 0 then
 			SetCharacterRadioFrequency(RADIO_FREQUENCY_LAST, not fromUI)
-			LocalPlayer.state:set("onRadio", tostring(RADIO_FREQUENCY_LAST), true)
+			plsr.State.flags.onRadio = tostring(RADIO_FREQUENCY_LAST)
 		end
-		exports["pulsar-sounds"]:PlayOne("radioon.ogg", 0.05 * (RADIO_CLICKS_VOLUME / 100))
+		plsr.Sounds.Do.Play:One("radioon.ogg", 0.05 * (RADIO_CLICKS_VOLUME / 100))
 	end
 
 	SendUpdates()
@@ -265,10 +265,10 @@ function SetCharacterRadioFrequency(freq, notifyChange)
 					frequencyName = name
 				else
 					canUseFrequency = false
-					exports["pulsar-hud"]:Notification("error", "Encrypted Radio Channel")
+					plsr.Notification:Error("Encrypted Radio Channel")
 				end
 			else
-				exports["pulsar-hud"]:Notification("error", "Out of Range Frequency With This Radio")
+				plsr.Notification:Error("Out of Range Frequency With This Radio")
 				canUseFrequency = false
 			end
 		end
@@ -282,19 +282,19 @@ function SetCharacterRadioFrequency(freq, notifyChange)
 
 			RADIO_FREQUENCY_NAME = frequencyName or ""
 			TriggerServerEvent("VOIP:Radio:Server:SetChannel", RADIO_FREQUENCY)
-			LocalPlayer.state:set("onRadio", tostring(RADIO_FREQUENCY), true)
+			plsr.State.flags.onRadio = tostring(RADIO_FREQUENCY)
 			SendUpdates()
 
-			local maskRadio = LocalPlayer.state.Character:GetData("HUDConfig").maskRadio or false
+			local maskRadio = plsr.State.character.HUDConfig?.maskRadio or false
 			TriggerEvent("EmergencyAlerts:Client:RadioChannelChange", tostring(RADIO_FREQUENCY))
 			TriggerEvent("Status:Client:Update", "radio-freq", maskRadio and "???.?" or RADIO_FREQUENCY)
-
+			
 			if notifyChange then
-				exports["pulsar-sounds"]:PlayOne("radioclick.ogg", 0.05 * (RADIO_CLICKS_VOLUME / 100))
+				plsr.Sounds.Do.Play:One("radioclick.ogg", 0.05 * (RADIO_CLICKS_VOLUME / 100))
 				if frequencyName then
-					exports["pulsar-hud"]:Notification("info", "Changed Radio Channel to " .. frequencyName)
+					plsr.Notification:Info("Changed Radio Channel to " .. frequencyName)
 				else
-					exports["pulsar-hud"]:Notification("info", "Changed Radio Channel to #" .. RADIO_FREQUENCY)
+					plsr.Notification:Info("Changed Radio Channel to #" .. RADIO_FREQUENCY)
 				end
 			end
 		else
@@ -305,7 +305,7 @@ end
 
 RegisterNetEvent("Characters:Client:Updated", function(k)
 	if k == "HUDConfig" and RADIO_FREQUENCY ~= 0 then
-		local maskRadio = LocalPlayer.state.Character:GetData("HUDConfig").maskRadio or false
+		local maskRadio = plsr.State.character.HUDConfig?.maskRadio or false
 		TriggerEvent("EmergencyAlerts:Client:RadioChannelChange", tostring(RADIO_FREQUENCY))
 		TriggerEvent("Status:Client:Update", "radio-freq", maskRadio and "???.?" or RADIO_FREQUENCY)
 	end
@@ -313,7 +313,7 @@ end)
 
 AddEventHandler("UI:Client:ResetFinished", function(manual)
 	if manual and RADIO_FREQUENCY then
-		local maskRadio = LocalPlayer.state.Character:GetData("HUDConfig").maskRadio or false
+		local maskRadio = plsr.State.character.HUDConfig?.maskRadio or false
 		TriggerEvent("EmergencyAlerts:Client:RadioChannelChange", tostring(RADIO_FREQUENCY))
 		TriggerEvent("Status:Client:Update", "radio-freq", maskRadio and "???.?" or RADIO_FREQUENCY)
 	end
@@ -341,21 +341,21 @@ function CycleRadioChannel(up)
 		SetCharacterRadioFrequency(switchingRadioChannel, true)
 	end
 
-	SetTimeout(1000, function()
+	Citizen.SetTimeout(1000, function()
 		radioChannelCycle = false
 	end)
 end
 
 RegisterNetEvent("Job:Client:DutyChanged", function(state)
 	Wait(1000)
-	if LocalPlayer.state.loggedIn then
+	if plsr.State.flags.loggedIn then
 		CheckRadioChannelAuth()
 	end
 end)
 
 RegisterNetEvent("Characters:Client:SetData", function()
 	Wait(1000)
-	if LocalPlayer.state.loggedIn then
+	if plsr.State.flags.loggedIn then
 		local hasRadio = CheckCharacterHasRadio()
 		if HAS_RADIO and not hasRadio then
 			HAS_RADIO = false
@@ -363,7 +363,7 @@ RegisterNetEvent("Characters:Client:SetData", function()
 			if RADIO_POWER then
 				RADIO_POWER = false
 				SetCharacterRadioFrequency(0)
-				exports["pulsar-sounds"]:PlayOne("radioclick.ogg", 0.5 * (RADIO_CLICKS_VOLUME / 100))
+				plsr.Sounds.Do.Play:One("radioclick.ogg", 0.5 * (RADIO_CLICKS_VOLUME / 100))
 			end
 
 			CloseRadio()
@@ -375,22 +375,22 @@ RegisterNetEvent("Characters:Client:SetData", function()
 			SendUpdates()
 		end
 
-		LocalPlayer.state.radioType = HAS_RADIO
+		plsr.State.flags.radioType = HAS_RADIO
 		CheckRadioChannelAuth()
 	end
 end)
 
 function GetHasRadioChannelAuth(freq)
 	if freq <= 20 then
-		if DoesCharacterPassChannelRestrictions(_emergencyRestriction) then
+		if DoesCharacterPassChannelRestrictions(config.EmergencyRestriction) then
 			return true, "Emergency #" .. freq
 		end
 	elseif freq == 21 then
-		if LocalPlayer.state.onDuty == "dgang" then
+		if plsr.State.flags.onDuty == "dgang" then
 			return true, "Poggers"
 		end
 	elseif freq == 22 then
-		if exports['pulsar-jobs']:HasJob("blackline") then
+		if plsr.Jobs.Permissions:HasJob("blackline") then
 			return true, "Mald"
 		end
 	elseif freq < 100 then
@@ -415,9 +415,8 @@ function CheckRadioChannelAuth()
 end
 
 function CheckCharacterHasRadio()
-	local character = LocalPlayer.state.Character
-	if character then
-		local states = character:GetData("States") or {}
+	if plsr.State.flags.loggedIn then
+		local states = plsr.State.character.States or {}
 		local hasRadio = false
 		local lowestLevel = 100
 		for k, v in ipairs(states) do
@@ -438,8 +437,8 @@ end
 
 function SetRadioChannelFromInput(input)
 	if input ~= RADIO_FREQUENCY and HAS_RADIO then
-		exports["pulsar-sounds"]:PlayOne("radioclick.ogg", 0.5 * (RADIO_CLICKS_VOLUME / 100))
-		SetCharacterRadioFrequency(exports['pulsar-core']:UtilsRound(tonumber(input) or 0, 1))
+		plsr.Sounds.Do.Play:One("radioclick.ogg", 0.5 * (RADIO_CLICKS_VOLUME / 100))
+		SetCharacterRadioFrequency(plsr.Utils:Round(tonumber(input) or 0, 1))
 	end
 end
 
@@ -458,10 +457,10 @@ function RadioVolumeUp(notify)
 		newVolume = 200
 	end
 
-	RADIO_VOLUME = exports["pulsar-voip"]:SetRadioVolume(newVolume)
+	RADIO_VOLUME = plsr.VOIP.Settings.Volumes.Radio:Set(newVolume)
 
 	if notify then
-		exports["pulsar-hud"]:Notification("info", "Radio Volume: " .. math.floor(RADIO_VOLUME) .. "%", 1500)
+		plsr.Notification:Info("Radio Volume: " .. math.floor(RADIO_VOLUME) .. "%", 1500)
 	end
 
 	SendUpdates()
@@ -473,10 +472,10 @@ function RadioVolumeDown(notify)
 		newVolume = 0
 	end
 
-	RADIO_VOLUME = exports["pulsar-voip"]:SetRadioVolume(newVolume)
+	RADIO_VOLUME = plsr.VOIP.Settings.Volumes.Radio:Set(newVolume)
 
 	if notify then
-		exports["pulsar-hud"]:Notification("info", "Radio Volume: " .. math.floor(RADIO_VOLUME) .. "%", 1500)
+		plsr.Notification:Info("Radio Volume: " .. math.floor(RADIO_VOLUME) .. "%", 1500)
 	end
 
 	SendUpdates()
@@ -505,9 +504,9 @@ RegisterNUICallback("ClickVolumeUp", function(data, cb)
 			newVolume = 200
 		end
 
-		RADIO_CLICKS_VOLUME = exports["pulsar-voip"]:SetRadioClickVolume(newVolume)
+		RADIO_CLICKS_VOLUME = plsr.VOIP.Settings.Volumes.RadioClicks:Set(newVolume)
 
-		exports["pulsar-sounds"]:PlayOne("radioclick.ogg", (RADIO_CLICKS_VOLUME / 100))
+		plsr.Sounds.Do.Play:One("radioclick.ogg", (RADIO_CLICKS_VOLUME / 100))
 	end
 	cb("ok")
 end)
@@ -519,9 +518,9 @@ RegisterNUICallback("ClickVolumeDown", function(data, cb)
 			newVolume = 0
 		end
 
-		RADIO_CLICKS_VOLUME = exports["pulsar-voip"]:SetRadioClickVolume(newVolume)
+		RADIO_CLICKS_VOLUME = plsr.VOIP.Settings.Volumes.RadioClicks:Set(newVolume)
 
-		exports["pulsar-sounds"]:PlayOne("radioclick.ogg", (RADIO_CLICKS_VOLUME / 100))
+		plsr.Sounds.Do.Play:One("radioclick.ogg", (RADIO_CLICKS_VOLUME / 100))
 	end
 	cb("ok")
 end)

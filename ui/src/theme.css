@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro&family=Space+Grotesk:wght@500;600&display=swap');
+
+:root {
+	--color-primary: #e5a502;
+	--color-primary-light: #e8a933;
+	--color-primary-dark: #fa5800;
+	--color-panel: #252726;
+	--color-panel-light: #303331;
+	--color-text: #ffffff;
+	--color-text-muted: #cecece;
+	--color-error: #e5484d;
+
+	--color-accent: #8b5cf6;
+	--color-accent-light: #b39dff;
+	--color-accent-border: rgba(139, 92, 246, 0.35);
+
+	--font-body: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+	--font-display: 'Space Grotesk', -apple-system, system-ui, sans-serif;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	width: 100vw;
+	height: 100vh;
+	overflow: hidden;
+	background: transparent;
+	font-family: var(--font-body);
+	color: var(--color-text);
+	user-select: none;
+}
+
+#app {
+	width: 100vw;
+	height: 100vh;
+}
+
+input,
+button {
+	font-family: inherit;
+	color: inherit;
+}

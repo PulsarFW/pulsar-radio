@@ -1,23 +1,28 @@
-fx_version("cerulean")
-game("gta5")
-lua54("yes")
-version "1.0.1"
-client_script("@pulsar-core/exports/cl_error.lua")
-client_script("@pulsar-pwnzor/client/check.lua")
+fx_version 'cerulean'
+game 'gta5'
+
+name 'Pulsar Radio'
+description 'Handheld radio'
+author 'Artmines - maintained for Pulsar Framework'
+url 'https://pulsarframe.work'
+version 'v1.0.0'
+
+version_check 'yes'
+github 'https://github.com/PulsarFW/pulsar_radio'
+
+client_script '@pulsar_core/components/cl_error.lua'
+shared_script '@pulsar_core/core/sh_pulsar.lua'
+client_script '@pulsar_pwnzor/client/check.lua'
 
 client_scripts({
-  "config.lua",
-  "client/*.lua",
+	'client/*.lua',
 })
 
-ui_page("ui/dist/index.html")
 files({
-  "ui/dist/index.html",
-  "ui/dist/*.png",
-  "ui/dist/*.webp",
-  "ui/dist/*.gif",
-  "ui/dist/*.gifv",
-  "ui/dist/*.js",
-  "ui/dist/*.mp3",
-  "ui/dist/*.ttf",
+	'ui/dist/index.html',
+	'ui/dist/assets/*',
+	'config/shared.lua',
 })
+
+ui_page 'ui/dist/index.html'
+lua54 'yes'
